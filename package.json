@@ -1,18 +1,22 @@
 {
-  "name": "dsh-minimax-quota",
-  "description": "MiniMax Token Plan quota chip for the DeepSeek Harness web surface: a compact inline entry in the composer dock showing the remaining 5-hour and weekly quota windows, with the full detail in a click-to-open panel.",
-  "version": "0.2.4",
+  "name": "dsh-plan-quota-chip",
+  "description": "Plan quota chip for the DeepSeek Harness web surface: a compact inline entry in the composer dock showing the remaining quota for MiniMax and OpenDesign, with the full per-provider detail in a click-to-open panel.",
+  "version": "0.1.0",
   "license": "MIT",
   "author": {
     "name": "boldandigital",
     "url": "https://github.com/boldandigital"
   },
-  "type": "module",
-  "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/boldandigital/dsh-minimax-quota.git"
+    "url": "git+https://github.com/boldandigital/dsh-plan-quota-chip.git"
   },
+  "homepage": "https://github.com/boldandigital/dsh-plan-quota-chip#readme",
+  "bugs": {
+    "url": "https://github.com/boldandigital/dsh-plan-quota-chip/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
@@ -49,15 +53,15 @@
     "dsh",
     "dsh-plugin",
     "minimax",
+    "opendesign",
     "quota",
+    "plan",
+    "plan-usage",
+    "plan-quota",
     "quota-chip"
   ],
   "engines": {
     "node": ">=22.0.0",
     "dsh": ">=0.2.2-rc.3"
-  },
-  "homepage": "https://github.com/boldandigital/dsh-minimax-quota#readme",
-  "bugs": {
-    "url": "https://github.com/boldandigital/dsh-minimax-quota/issues"
   }
 }

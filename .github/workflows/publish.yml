@@ -5,8 +5,8 @@ name: publish
 #
 # npm only accepts an OIDC publish from a workflow it has a trusted publisher
 # for. Configure one at:
-#   https://www.npmjs.com/package/dsh-minimax-quota/settings
-# with the repository `boldandigital/dsh-minimax-quota`, the workflow file
+#   https://www.npmjs.com/package/dsh-plan-quota-chip/settings
+# with the repository `boldandigital/dsh-plan-quota-chip`, the workflow file
 # `publish.yml`, and the `npm publish` allowed action. Without it npm answers
 # `E404 ... you do not have permission to access it`.
 on:

@@ -1,16 +1,17 @@
-# dsh-minimax-quota bundle patch: mounts the quota chip into a dsh profile.
+# dsh-plan-quota-chip bundle patch: mounts the quota chip into a dsh profile.
 #
 # The host half reads the MiniMax credential through `ctx.credentials` (the
-# harness credential seam), so the API key never reaches the browser: the
-# client half asks the host over the loopback Connection RPC channel and gets
-# back already-normalized quota rows.
+# harness credential seam) and the OpenDesign quota through the signed-in
+# `vela` CLI session, so no credential ever reaches the browser: the client
+# half asks the host over the loopback Connection RPC channel and gets back
+# already-normalized quota rows for both providers.
 #
 # Installed into the active profile with:
-#   dsh plugin --profile desktop add dsh-minimax-quota
+# dsh plugin --profile desktop add dsh-plan-quota-chip
 
 - insert:
-    - id: minimax-quota
-      name: 'dsh-minimax-quota'
+    - id: plan-usage
+      name: 'dsh-plan-quota-chip'
       config:
         # How often the chip re-reads the quota. MiniMax resets its 5-hour
         # window on a rolling schedule, so a minute is a sensible ceiling.
@@ -18,3 +19,7 @@
         # Credential reference resolved through the harness credential seam.
         # `MINIMAX_API_KEY` is already present in ~/.dsh/.credentials.yaml.
         credentialRef: MINIMAX_API_KEY
+        # Path to the `vela` CLI. Empty uses $VELA_BIN, then ~/.local/bin/vela.
+        velaBinary: ''
+        # Workspace to query. Empty resolves it with `vela team-projects list`.
+        workspaceId: ''

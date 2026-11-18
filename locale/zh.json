@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "MiniMax 配额",
-    "description": "在输入框中显示 MiniMax Token Plan 的剩余配额：一个小徽标显示 5 小时和每周窗口，点击展开可看完整详情。"
+    "title": "套餐用量",
+    "description": "在输入框中显示 MiniMax 与 OpenDesign 的剩余套餐配额：一个小徽标显示最紧张的 5 小时与每周窗口，点击展开可查看各提供方的完整详情。"
   }
 }

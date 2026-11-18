@@ -1,56 +1,37 @@
-[![Listed on DSH Plugin Hub](https://dsh-plugin.org/badges/listed.svg)](https://dsh-plugin.org/plugins/boldandigital/dsh-minimax-quota)
+# dsh-plan-quota-chip
 
-# dsh-minimax-quota
-
-MiniMax Token Plan quota chip for the DeepSeek Harness web surface.
-
-It registers one entry in the `conversation.composer.dock` slot — the row below
-the composer card — so the remaining quota appears beside the "8.9M tok · Cache hit
-91%" strip without touching the shipped UI.
+Plan quota chip for the DeepSeek Harness web surface: one compact entry in the
+composer dock showing the tightest remaining plan quota across MiniMax and
+OpenDesign, with the full per-provider detail in a click-to-open panel.
 
 ```
-● MiniMax 5h 32%
+● MiniMax 5h 64%
 ```
 
-**Clicking the chip opens a panel** with the full detail: for every model
-bucket MiniMax reports, both the 5-hour and the weekly window, each with its
-remaining percentage, the "x of y left" request counts where MiniMax reports
-them, and the reset time.
+The chip always shows the **tightest window across all providers** — the
+reading that matters most, whichever provider it comes from. Click the chip to
+open the panel and switch provider with the segmented control: **All** /
+**MiniMax** / **OpenDesign**.
 
-Hovering does nothing. A readout that only appears on hover is invisible on a
-touch screen, awkward on a trackpad and impossible to screenshot — so the
-extra numbers live in a panel you open on purpose, and the chip stays a
-one-glance answer.
-
-### Choosing what the chip shows
-
-The panel carries a small segmented control — **5-hour** or **Weekly** — that
-decides which window the chip itself reports. The choice is remembered in the
-browser, so it survives a reload, and the chip updates the moment you pick
-one.
-
-The chip shows the **lowest** percentage across the reported model buckets for
-the chosen window, because that is the number that decides when you actually
-run out. If MiniMax reports only one of the two windows, the chip falls back
-to the other one rather than showing nothing.
-
-The panel always shows **both** windows, whatever the chip is set to, so
-nothing is hidden by the choice.
+The chip never hides the other provider behind a failure: if MiniMax cannot be
+read, the chip still reports OpenDesign (and the panel explains what went
+wrong); if OpenDesign cannot be read, the chip still reports MiniMax.
 
 ## How it works
 
-Two halves, following the DSH client-plugin contract:
+| Part | File | What it does |
+| --- | --- | --- |
+| Host | `lib/index.js` | Reads MiniMax through the credential seam and OpenDesign through the signed-in `vela` CLI session, serves both over the loopback RPC channel. |
+| Client | `lib/client.js` | Renders the chip and the panel in the `conversation.composer.dock` slot. |
 
-| Half | File | Role |
-|---|---|---|
-| Host | `lib/index.js` | Resolves the API key through the harness credential seam, queries MiniMax, normalizes the result |
-| Client | `lib/client.js` | Renders the chip and registers it into the composer dock slot |
+The data flows over the Connection RPC channel `/api` (method namespace
+`plan-usage`). The client never talks to MiniMax or OpenDesign directly: the
+host half normalizes both providers into one shared row shape and answers over
+the local channel, so no credential ever reaches the browser.
 
-The browser never sees the API key. The client calls the host over the
-loopback Connection RPC channel (`/api`, method namespace `minimax-quota`), and
-the host returns already-normalized rows.
+## Where the quota comes from
 
-### Upstream endpoints
+### MiniMax
 
 Tried in order; the first that answers wins:
 
@@ -63,82 +44,71 @@ Tried in order; the first that answers wins:
 All three accept a plain API key as `Authorization: Bearer <key>` — no admin
 key required.
 
-### The region reporting quirk
+**The region reporting quirk:** the international endpoints report
+`current_interval_usage_count` / `current_weekly_usage_count` as **how much is
+left**, while the China endpoint reports **how much was used**. Naive
+subtraction therefore inverts the numbers on one side. The host half reads the
+region-independent `*_remaining_percent` fields as the source of truth and
+only derives "x of y left" from the counts, interpreting them per region.
 
-The international endpoints report `current_interval_usage_count` /
-`current_weekly_usage_count` as **how much is left**; the China endpoint
-reports **how much was used**. Naive subtraction therefore inverts the numbers
-on one side. This plugin reads the region-independent
-`*_remaining_percent` fields as the source of truth and only derives
-"x of y left" from the counts, interpreting them per region.
+### OpenDesign
+
+The host half shells out to the OpenDesign `vela` CLI, which is already signed
+in on this machine:
+
+- `vela team-projects list` — resolves the workspace id.
+- `vela billing funding-check --workspace-id <id> --format json` — the plan
+  windows (5-hour and weekly) with their credit limits, remaining credits and
+  reset times.
+- `vela billing summary --format json` — the plan tier, the subscription and
+  recharge credits, and the USD balance.
+
+The gateway host (`amr-link.open-design.ai`) exposes no quota endpoint, and the
+control plane (`amr-api.open-design.ai`) needs a separate control key that only
+the CLI session holds, so the CLI is the supported seam.
 
 ## Configuration
 
 In the profile's `cordis.patch.yml`:
 
 ```yaml
-- id: minimax-quota
-  name: 'dsh-minimax-quota'
-  config:
-    refreshMs: 60000
-    credentialRef: MINIMAX_API_KEY
+- insert:
+    - id: plan-usage
+      name: 'dsh-plan-quota-chip'
+      config:
+        refreshMs: 60000
+        credentialRef: MINIMAX_API_KEY
+        velaBinary: ''
+        workspaceId: ''
 ```
 
 | Key | Default | Meaning |
 |---|---|---|
-| `refreshMs` | `60000` | How often the chip re-reads the quota (minimum 5000) |
-| `credentialRef` | `MINIMAX_API_KEY` | Credential reference resolved through `ctx.credentials` |
+| `refreshMs` | `60000` | How often the chip re-reads the quota (minimum 5000). |
+| `credentialRef` | `MINIMAX_API_KEY` | Credential reference resolved through `ctx.credentials` (the harness credential seam). |
+| `velaBinary` | `''` | Path to the `vela` CLI. Empty uses `$VELA_BIN`, then `~/.local/bin/vela`. |
+| `workspaceId` | `''` | Workspace to query. Empty resolves it with `vela team-projects list`. |
 
-The credential must exist in the DSH credential store
-(`~/.dsh/.credentials.yaml`). It already does on this machine, so the chip
-works with no further setup.
+The MiniMax credential must exist in the DSH credential store
+(`~/.dsh/.credentials.yaml`). `MINIMAX_API_KEY` is already there on this
+machine, so the MiniMax half works with no further setup.
 
 ## Install
 
 ```bash
-dsh plugin --profile web add dsh-minimax-quota
+dsh plugin --profile desktop add dsh-plan-quota-chip
 ```
 
-Or through the plugin manager: **Plugins → Add plugin**, then choose the npm
-package `dsh-minimax-quota`.
+The `vela` CLI has to be installed and signed in (`vela auth status`) for the
+OpenDesign half to report anything. A provider that fails never hides the
+other provider's data: the chip falls back to the provider that did answer,
+and the panel shows the failing provider's error.
 
-After installing, **reload the GUI page** so the browser picks up the new
-client module from the host's client graph.
+## Replaces
 
-## Also useful
+The standalone `dsh-minimax-quota` and `dsh-opendesign-quota` plugins, which
+this package merges into one chip.
 
-The same quota can be read from the terminal with the host's own tooling,
-which prints it as JSON:
+## License
 
-```bash
-dsh plugin --profile desktop status
-```
-
-## Reference
-
-The slot contract, the RPC envelope and the client-plugin shape were modelled
-on the community plugin `dsh-quota-panel`, which uses `shell.overlay` instead
-of the composer dock.
-
-## npm
-
-This package is published on npm as [`dsh-minimax-quota`](https://www.npmjs.com/package/dsh-minimax-quota), so you can install it with:
-
-```sh
-dsh plugin --profile web add dsh-minimax-quota
-npm install dsh-minimax-quota
-```
-
-The package name is permanent on npm. Publishing new versions follows the
-standard `npm version patch` workflow with git tags.
-
-## Marketplace
-
-Add the plugin market index source under **Plugins → Discover → Manage index sources**:
-
-```text
-https://boldandigital.github.io/dsh-plugin-index/index.json
-```
-
-The index is rebuilt from the npm registry every morning, so it never points
-at a version the registry does not have.
+MIT
