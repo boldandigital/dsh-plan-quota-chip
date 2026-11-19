@@ -260,10 +260,10 @@ function payload(rows, providers) {
 	};
 }
 
-// 1. Two providers with rows: the chip shows the tighter percent and the
-//    label of the provider that window belongs to. The looser provider comes
-//    first on purpose, so the chip has to compare the windows rather than
-//    take the first row it sees.
+// 1. Two providers with rows: the chip shows the COMBINED quota of both
+//    plans, not the tightest provider on its own. The two providers carry
+//    the same total (100000) here, so the combined remaining percent is the
+//    average of the two remaining percents: (91 + 64) / 2 = 78.
 const bothProviders = payload(
 	[row('opendesign', 91, 72), row('minimax', 64, 88)],
 	[
@@ -272,13 +272,13 @@ const bothProviders = payload(
 	],
 );
 const both = await mount(bothProviders);
-assert.match(both, /64%/, 'the chip shows the tighter percent across all providers');
-assert.doesNotMatch(both, /91%/, 'the looser percent does not reach the chip');
-assert.match(both, /MiniMax/, 'the chip names the provider the tightest window belongs to');
-assert.doesNotMatch(both, /OpenDesign/, 'the chip does not name the looser provider');
+assert.match(both, /78%/, 'the chip shows the combined percent across all providers');
+assert.doesNotMatch(both, /91%/, 'a single provider percent does not reach the chip');
+assert.doesNotMatch(both, /64%/, 'the other single provider percent does not reach the chip');
+assert.match(both, /Plan usage/, 'the chip names the combined plan usage');
 assert.ok(
-	failedLabels.some((label) => label.includes('MiniMax') && label.includes('64%')),
-	'the chip accessible label names the tightest provider and its percent',
+	failedLabels.some((label) => label.includes('Plan usage') && label.includes('78%')),
+	'the chip accessible label names the combined percent',
 );
 
 // 2. One provider fails: the chip still shows the working provider's percent,
@@ -293,10 +293,9 @@ const oneFailing = payload(
 failedLabels = [];
 const degraded = await mount(oneFailing);
 assert.match(degraded, /37%/, 'the chip still shows the working provider percent');
-assert.match(degraded, /OpenDesign/, 'the chip names the working provider');
 assert.ok(
-	failedLabels.some((label) => label.includes('OpenDesign') && label.includes('37%')),
-	'the chip accessible label names the working provider and its percent',
+	failedLabels.some((label) => label.includes('Plan usage') && label.includes('37%')),
+	'the chip accessible label names the combined percent of the working providers',
 );
 
 // The panel lists every provider, so the failing one shows its error.
@@ -309,7 +308,41 @@ assert.ok(
 	'the panel is exposed as a labelled dialog',
 );
 
-// 3. No rows at all: the chip reports n/a.
+// 3. A provider on a free plan has no quota window but does have a plan
+//    state. The panel has to show that plan, not only "no quota windows".
+const freePlan = payload(
+	[],
+	[
+		{ id: 'minimax', label: 'MiniMax', ok: false, error: 'no quota windows reported' },
+		{
+			id: 'opendesign',
+			label: 'OpenDesign',
+			ok: true,
+			error: null,
+			plan: {
+				tier: 'free',
+				status: null,
+				eligible: false,
+				balanceUsd: 0,
+				creditsPerUsd: 10000,
+				subscriptionCredits: 0,
+				rechargeCredits: 0,
+				totalAvailableCredits: 0,
+				usageCount: 0,
+				rechargeCount: 0,
+				introEligible: true,
+				fundingCheck: 'insufficient',
+			},
+		},
+	],
+);
+const freePanel = await mount(freePlan, true);
+assert.match(freePanel, /Free plan/, 'the panel shows the plan tier of a provider without windows');
+assert.match(freePanel, /no coding plan/, 'the panel says the provider has no coding plan');
+assert.match(freePanel, /0 credits left/, 'the panel shows the remaining credits');
+assert.match(freePanel, /first month free available/, 'the panel shows the introductory offer');
+
+// 4. No rows at all: the chip reports n/a.
 const none = payload(
 	[],
 	[
