@@ -19,7 +19,13 @@
         # Credential reference resolved through the harness credential seam.
         # `MINIMAX_API_KEY` is already present in ~/.dsh/.credentials.yaml.
         credentialRef: MINIMAX_API_KEY
+        # The OpenDesign control key (`vela_ctrl_...`) is the credential that
+        # actually carries the plan. When it resolves, the host reads the
+        # control plane instead of the CLI session, which may belong to a
+        # different account. Remove it to fall back to the vela CLI.
+        controlKeyRef: OPENDESIGN_CONTROL_KEY
         # Path to the `vela` CLI. Empty uses $VELA_BIN, then ~/.local/bin/vela.
         velaBinary: ''
-        # Workspace to query. Empty resolves it with `vela team-projects list`.
+        # Workspace to query. Empty resolves it (control plane: the default
+        # workspace; CLI: `vela team-projects list`).
         workspaceId: ''
