@@ -9,11 +9,10 @@ with the full per-provider detail in a click-to-open panel.
 ```
 
 The chip shows **one combined number for every plan**: the windows of all
-providers are pooled into a single remaining percentage, and the accessible
-label carries the remaining credits as well (`Plan usage: 64% 5-hour
-(1.2M of 2M left)`). Click the chip to open the panel and narrow it down with
-the window control (**5-hour** / **Weekly**) and the provider control (**All** /
-**MiniMax** / **OpenDesign**).
+providers are pooled into a single remaining percentage. Click the chip to open
+its right-aligned popup and filter it by window (**5-hour** / **Weekly**) or
+provider (**All** / **MiniMax** / **OpenDesign**). The popup shows each window’s
+remaining percentage and reset timing without raw quota counts.
 
 A provider on a plan without quota windows (a free account, for example) is
 still described: the panel shows its plan state — tier, credits, balance and

@@ -1,12 +1,12 @@
 # Where this plugin is published
 
-Three channels, all reachable today. This file records what each one needs,
-so nothing has to be rediscovered later.
+Release and discovery channels for this plugin, and what each one needs.
 
 ## 1. npm — the install path
 
-This package is published on npm as
+The package name on npm is
 [`dsh-plan-quota-chip`](https://www.npmjs.com/package/dsh-plan-quota-chip).
+Once a version is published, install it with:
 
 ```sh
 dsh plugin --profile desktop add dsh-plan-quota-chip
@@ -22,7 +22,7 @@ and its `engines.dsh`.
 | Package name | `dsh-plan-quota-chip` |
 | Registry owner | the npm account that published it |
 | Author field | `boldandigital (https://github.com/boldandigital)` |
-| Versions | `0.1.0` |
+| Versions | See the npm registry listing |
 
 The npm **name** is permanent: npm only allows an unpublish within 72 hours
 of a release, and the name stays reserved afterwards. Publishing `0.1.1` and

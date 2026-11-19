@@ -281,6 +281,16 @@ assert.ok(
 	'the chip accessible label names the combined percent',
 );
 
+const bothPanel = await mount(bothProviders, true);
+assert.match(bothPanel, /91%/, 'the panel still shows the MiniMax percentage');
+assert.match(bothPanel, /64%/, 'the panel still shows the OpenDesign percentage');
+assert.match(bothPanel, /3h 0m left/, 'the panel still shows the reset countdown');
+assert.doesNotMatch(bothPanel, /\d[\d.kMB]*\/\d[\d.kMB]* left/, 'the panel omits raw quota counts');
+assert.ok(
+	failedLabels.every((label) => !/ of .* left\)/.test(label)),
+	'the chip accessible label also omits raw quota counts',
+);
+
 // 2. One provider fails: the chip still shows the working provider's percent,
 //    and the failing provider's error reaches the panel.
 const oneFailing = payload(
