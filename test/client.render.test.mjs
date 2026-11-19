@@ -291,6 +291,44 @@ assert.ok(
 	'the chip accessible label also omits raw quota counts',
 );
 
+// 1b. A plan that reports no token counts at all. MiniMax serves its token
+// plan as percentages only (`current_interval_total_count: 0`), so the host
+// half hands the client a row whose interval and weekly counts are null. The
+// chip must still count that plan: pooling the raw counts would silently drop
+// it and the chip would report the other plan alone.
+const percentOnlyMinimax = {
+provider: 'minimax',
+model: 'MiniMax',
+intervalPercent: 91,
+weeklyPercent: 29,
+interval: null,
+weekly: null,
+intervalResetsAt: null,
+weeklyResetsAt: null,
+intervalMsLeft: 781877,
+weeklyMsLeft: 310381877,
+intervalLabel: '5-hour',
+weeklyLabel: 'Weekly',
+intervalBadge: '5h',
+weeklyBadge: 'wk',
+};
+const percentOnlyPayload = payload(
+[percentOnlyMinimax, row('opendesign', 94, 89)],
+[
+{ id: 'minimax', label: 'MiniMax', ok: true, error: null },
+{ id: 'opendesign', label: 'OpenDesign', ok: true, error: null },
+],
+);
+failedLabels = [];
+const percentOnly = await mount(percentOnlyPayload);
+assert.match(percentOnly, /93%/, 'a percent-only plan still reaches the combined chip');
+assert.doesNotMatch(percentOnly, /94%/, 'the plan with counts does not swallow the percent-only plan');
+assert.ok(
+failedLabels.some((label) => label.includes('Plan usage') && label.includes('93%')),
+'the chip accessible label names the combined percent of both plans',
+);
+
+
 // 2. One provider fails: the chip still shows the working provider's percent,
 //    and the failing provider's error reaches the panel.
 const oneFailing = payload(

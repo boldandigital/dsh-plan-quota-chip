@@ -8,10 +8,15 @@ with the full per-provider detail in a click-to-open panel.
 ● Plan usage 5h 64%
 ```
 
-The chip shows **one combined number for every plan**: the windows of all
-providers are pooled into a single remaining percentage. Click the chip to open
-its right-aligned popup and filter it by window (**5-hour** / **Weekly**) or
-provider (**All** / **MiniMax** / **OpenDesign**). The popup shows each window’s
+The chip shows **one combined number for every plan**: each plan contributes the
+percent it has left in the selected window, and the chip reports the average —
+one plan, one vote. The percents are averaged rather than the raw allowances
+because the plans are measured in different units (MiniMax in tokens, OpenDesign
+in credits): pooling the counts would let whichever plan reports the larger
+numbers swallow the other one, and MiniMax's token plan reports no counts at all,
+only percents. Click the chip to open its right-aligned popup and filter it by
+window (**5-hour** / **Weekly**) or provider (**All** / **MiniMax** /
+**OpenDesign**). The popup shows each window’s
 remaining percentage and reset timing without raw quota counts.
 
 A provider on a plan without quota windows (a free account, for example) is

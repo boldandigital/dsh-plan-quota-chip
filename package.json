@@ -1,7 +1,7 @@
 {
   "name": "dsh-plan-quota-chip",
   "description": "Plan quota chip for the DeepSeek Harness web surface: a compact inline entry in the composer dock showing the remaining quota for MiniMax and OpenDesign, with the full per-provider detail in a click-to-open panel.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "license": "MIT",
   "author": {
     "name": "boldandigital",
