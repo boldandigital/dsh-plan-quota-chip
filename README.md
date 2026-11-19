@@ -1,17 +1,23 @@
 # dsh-plan-quota-chip
 
 Plan quota chip for the DeepSeek Harness web surface: one compact entry in the
-composer dock showing the tightest remaining plan quota across MiniMax and
-OpenDesign, with the full per-provider detail in a click-to-open panel.
+composer dock showing the remaining plan quota across MiniMax and OpenDesign,
+with the full per-provider detail in a click-to-open panel.
 
 ```
-● MiniMax 5h 64%
+● Plan usage 5h 64%
 ```
 
-The chip always shows the **tightest window across all providers** — the
-reading that matters most, whichever provider it comes from. Click the chip to
-open the panel and switch provider with the segmented control: **All** /
-**MiniMax** / **OpenDesign**.
+The chip shows **one combined number for every plan**: the windows of all
+providers are pooled into a single remaining percentage, and the accessible
+label carries the remaining credits as well (`Plan usage: 64% 5-hour
+(1.2M of 2M left)`). Click the chip to open the panel and narrow it down with
+the window control (**5-hour** / **Weekly**) and the provider control (**All** /
+**MiniMax** / **OpenDesign**).
+
+A provider on a plan without quota windows (a free account, for example) is
+still described: the panel shows its plan state — tier, credits, balance and
+whether a coding plan applies — instead of only "No quota windows reported".
 
 The chip never hides the other provider behind a failure: if MiniMax cannot be
 read, the chip still reports OpenDesign (and the panel explains what went
@@ -57,15 +63,24 @@ The host half shells out to the OpenDesign `vela` CLI, which is already signed
 in on this machine:
 
 - `vela team-projects list` — resolves the workspace id.
-- `vela billing funding-check --workspace-id <id> --format json` — the plan
-  windows (5-hour and weekly) with their credit limits, remaining credits and
-  reset times.
+- `vela billing funding-check --workspace-id <id> --format json` — the coding
+  plan windows (5-hour and weekly) with their credit limits, remaining credits
+  and reset times.
+- `vela billing workspace-snapshot --workspace-id <id> --format json` — the
+  design plan windows (`designPlanWindows`, a 5-hour and a 7-day window in
+  credits) and the workspace's billing state. This is the same call the
+  OpenDesign desktop app makes, so both window sets are read.
 - `vela billing summary --format json` — the plan tier, the subscription and
   recharge credits, and the USD balance.
 
 The gateway host (`amr-link.open-design.ai`) exposes no quota endpoint, and the
 control plane (`amr-api.open-design.ai`) needs a separate control key that only
 the CLI session holds, so the CLI is the supported seam.
+
+**A plan without windows still has a state.** An account on a free plan has no
+quota window at all, so the panel reports its plan state instead of only
+"No quota windows reported": tier, credits left, USD balance, whether a coding
+plan applies, and whether the first month is still free.
 
 ## Configuration
 
