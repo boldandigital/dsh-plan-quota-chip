@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Plan usage",
-    "description": "Shows the remaining plan quota for MiniMax and OpenDesign in the composer: one compact chip with the combined quota of every plan, with the full per-provider detail in a click-to-open panel."
+    "description": "Shows the remaining plan quota for MiniMax and OpenDesign in the composer: one compact chip with the combined quota of every plan, with the full per-provider detail in a click-to-open panel. Each reset deadline is a countdown: days for anything a day or more away, hours for the final day."
   }
 }

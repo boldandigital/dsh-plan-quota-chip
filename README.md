@@ -5,7 +5,7 @@ composer dock showing the remaining plan quota across MiniMax and OpenDesign,
 with the full per-provider detail in a click-to-open panel.
 
 ```
-● Plan usage 5h 64%
+● Plan usage 5h 64% 3h 0m left
 ```
 
 The chip shows **one combined number for every plan**: each plan contributes the
@@ -18,6 +18,16 @@ only percents. Click the chip to open its right-aligned popup and filter it by
 window (**5-hour** / **Weekly**) or provider (**All** / **MiniMax** /
 **OpenDesign**). The popup shows each window’s
 remaining percentage and reset timing without raw quota counts.
+
+Both the chip and every popup row carry a **reset countdown**, in whichever
+unit fits it: a week out it reads in days (`6d 21h left`), and on its own it
+switches back to hours once less than a day remains (`23h 10m left`) — the two
+units meet at the 24-hour mark, so the countdown never flips back and forth.
+The countdown advances every minute between polls, so it stays true even when
+a quota refresh is slow. Each plan resets on its own schedule, so in the
+combined reading the chip reports the **soonest** reset of the window it is
+showing (the 5-hour or weekly one); the popup still lists every plan's own
+reset time.
 
 A provider on a plan without quota windows (a free account, for example) is
 still described: the panel shows its plan state — tier, credits, balance and

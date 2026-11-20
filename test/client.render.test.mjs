@@ -21,14 +21,27 @@ const clientPath = join(here, '..', 'lib', 'client.js');
 function createReact() {
 	const slots = [];
 	let cursor = 0;
+	// Hook order, the way React enforces it: a slot keeps the kind of hook
+	// that first occupied it, so a hook that starts running a render later
+	// (behind a conditional or an early return) trips the check instead of
+	// silently sliding into a neighbour's state.
+	let ordering = new Map();
+	const claim = (index, kind) => {
+		const seen = ordering.get(index);
+		if (seen === undefined) ordering.set(index, kind);
+		else if (seen !== kind) {
+			throw new Error('hook ' + index + ' was a ' + seen + ' and is now a ' + kind);
+		}
+	};
 	const React = {
 		createElement(type, props, ...children) {
 			return { type, props: { ...(props || {}), children } };
 		},
 		useState(initial) {
 			const index = cursor++;
+			claim(index, 'state');
 			if (!slots[index]) {
-				slots[index] = { state: typeof initial === 'function' ? initial() : initial };
+				slots[index] = { kind: 'state', state: typeof initial === 'function' ? initial() : initial };
 			}
 			const slot = slots[index];
 			return [
@@ -40,12 +53,17 @@ function createReact() {
 		},
 		useEffect(effect) {
 			const index = cursor++;
-			if (!slots[index]) slots[index] = {};
+			// React throws when the hook order changes between renders - a hook that
+			// stepped behind an early return would do exactly that, so the stand-in
+			// refuses it too instead of rendering with a shifted slot.
+			claim(index, 'effect');
+			if (!slots[index]) slots[index] = { kind: 'effect' };
 			slots[index].effect = effect;
 		},
 		useRef(initial) {
 			const index = cursor++;
-			if (!slots[index]) slots[index] = { current: initial };
+			claim(index, 'ref');
+			if (!slots[index]) slots[index] = { kind: 'ref', current: initial };
 			return slots[index];
 		},
 	};
@@ -53,6 +71,8 @@ function createReact() {
 	React.reset = () => {
 		slots.length = 0;
 		cursor = 0;
+		// A fresh mount owns a fresh order.
+		ordering = new Map();
 	};
 	/**
 	 * Prepare for one render: the hook cursor restarts, so every render reads
@@ -221,9 +241,10 @@ function findButton(node) {
  * @param {string} provider - 'minimax' or 'opendesign'.
  * @param {number} intervalPercent - remaining percent of the 5-hour window.
  * @param {number} weeklyPercent - remaining percent of the weekly window.
+ * @param {object} [overrides] - fields that differ from the defaults.
  * @returns {object} the row.
  */
-function row(provider, intervalPercent, weeklyPercent) {
+function row(provider, intervalPercent, weeklyPercent, overrides = {}) {
 	return {
 		provider,
 		model: provider === 'minimax' ? 'MiniMax Token Plan' : 'OpenDesign plan',
@@ -231,14 +252,15 @@ function row(provider, intervalPercent, weeklyPercent) {
 		weeklyPercent,
 		interval: { total: 100000, remaining: intervalPercent * 1000, used: 100000 - intervalPercent * 1000 },
 		weekly: { total: 500000, remaining: weeklyPercent * 5000, used: 500000 - weeklyPercent * 5000 },
-		intervalResetsAt: Date.now() + 3 * 3600 * 1000,
-		weeklyResetsAt: Date.now() + 6 * 86400 * 1000,
-		intervalMsLeft: 3 * 3600 * 1000,
-		weeklyMsLeft: 6 * 86400 * 1000,
+		intervalResetsAt: Date.now() + (overrides.intervalMsLeft ?? 3 * 3600 * 1000),
+		weeklyResetsAt: Date.now() + (overrides.weeklyMsLeft ?? 6 * 86400 * 1000),
+		intervalMsLeft: overrides.intervalMsLeft ?? 3 * 3600 * 1000,
+		weeklyMsLeft: overrides.weeklyMsLeft ?? 6 * 86400 * 1000,
 		intervalLabel: '5-hour',
 		weeklyLabel: 'Weekly',
 		intervalBadge: '5h',
 		weeklyBadge: 'wk',
+		...overrides,
 	};
 }
 
@@ -400,5 +422,55 @@ const none = payload(
 );
 const empty = await mount(none);
 assert.match(empty, /n\/a/, 'no rows reports n/a on the chip');
+
+// 5. The chip carries the reset countdown, in the unit that fits it. A
+// six-day window reads as days, a three-hour window reads as hours, and the
+// combined chip reports the SOONEST reset of the window it shows — not the
+// tightest provider's, and not an invented plan deadline.
+const HOUR = 3600 * 1000;
+const bothDefault = await mount(bothProviders);
+assert.match(bothDefault, /3h 0m left/, 'the chip shows the countdown of the window it reports');
+assert.ok(
+	failedLabels.some((label) => label.includes('Plan usage') && label.includes('(3h 0m left)')),
+	'the chip accessible label names the countdown too',
+);
+
+const staggered = payload(
+	[
+		row('opendesign', 91, 72, { weeklyMsLeft: 2 * 86400000 + 5 * HOUR }),
+		row('minimax', 64, 88, { weeklyMsLeft: 5 * 86400000 + 2 * HOUR }),
+	],
+	[
+		{ id: 'minimax', label: 'MiniMax', ok: true, error: null },
+		{ id: 'opendesign', label: 'OpenDesign', ok: true, error: null },
+	],
+);
+const staggeredChip = await mount(staggered);
+assert.match(staggeredChip, /3h 0m left/, 'the 5-hour window reads in hours');
+const staggeredPanel = await mount(staggered, true);
+assert.match(staggeredPanel, /2d 5h left/, 'a weekly window over a day out reads in days');
+assert.doesNotMatch(staggeredPanel, /53h/, 'a weekly window does not read in raw hours');
+
+// The switch is automatic: the same plan reads in days at 25h and in hours at
+// 23h, and a deadline that has already passed leaves no countdown at all.
+const underOneDay = payload(
+	[row('opendesign', 91, 72, { weeklyMsLeft: 23 * HOUR + 10 * 60000 })],
+	[{ id: 'opendesign', label: 'OpenDesign', ok: true, error: null }],
+);
+const underOneDayChip = await mount(underOneDay, true);
+const underOneDayClip = await mount(underOneDay);
+assert.match(underOneDayChip, /23h 10m left/, 'under a day the panel switches to hours by itself');
+assert.doesNotMatch(underOneDayChip, /0d /, 'the last day never reads as 0 days');
+assert.match(underOneDayClip, /3h 0m left/, 'the chip keeps reporting the 5-hour window');
+
+const justOverOneDay = payload(
+	[row('opendesign', 91, 72, { weeklyMsLeft: 25 * HOUR + 10 * 60000 })],
+	[{ id: 'opendesign', label: 'OpenDesign', ok: true, error: null }],
+);
+const justOverOneDayChip = await mount(justOverOneDay, true);
+assert.match(justOverOneDayChip, /1d 1h left/, 'the day the window crosses 24h it reads in days');
+
+// 6. No rows at all still reports n/a, and now without a countdown.
+assert.doesNotMatch(empty, /left/, 'no rows means no reset countdown on the chip');
 
 console.log('client render checks passed');
